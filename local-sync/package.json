@@ -1,0 +1,10 @@
+{
+  "name": "pulsework-local-sync",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Agente independente em Node.js para monitoramento de projetos locais, README e histórico Git.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.mjs"
+  }
+}
