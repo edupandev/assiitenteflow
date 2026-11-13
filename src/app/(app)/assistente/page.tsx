@@ -1,17 +1,45 @@
-import { ModuleScaffold } from "@/components/layout/page-placeholder";
+import { requireUserContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { isAIConfigured } from "@/services/ai";
+import { AssistantClient } from "@/modules/assistant/assistant-client";
 
-export default function AssistentePage() {
+export default async function AssistentePage() {
+  const { userId } = await requireUserContext();
+  const supabase = await createClient();
+
+  const { data: conversations } = await supabase
+    .from("assistant_conversations")
+    .select("id, title, updated_at")
+    .eq("user_id", userId)
+    .order("updated_at", { ascending: false })
+    .limit(20);
+
+  const activeId = conversations?.[0]?.id ?? null;
+  let messages: {
+    id: string;
+    role: "user" | "assistant" | "system";
+    content: string;
+    token_count: number;
+    created_at: string;
+  }[] = [];
+
+  if (activeId) {
+    const { data: msgs } = await supabase
+      .from("assistant_messages")
+      .select("id, role, content, token_count, created_at")
+      .eq("conversation_id", activeId)
+      .eq("user_id", userId)
+      .order("created_at", { ascending: true })
+      .limit(50);
+    messages = (msgs ?? []) as typeof messages;
+  }
+
   return (
-    <ModuleScaffold
-      title="Assistente IA"
-      description="Assistente individual com cache de contexto e economia de tokens."
-      phase="Fase 5"
-      items={[
-        "Contexto isolado por funcionário com resumos persistentes por projeto",
-        "Detecção de alterações por hash para evitar reenvio de README completo",
-        "Criação e sugestão de tarefas diretamente pela conversa",
-        "Limite configurável de tokens e histórico resumido",
-      ]}
+    <AssistantClient
+      initialConversations={conversations ?? []}
+      initialConversationId={activeId}
+      initialMessages={messages}
+      aiConfigured={isAIConfigured()}
     />
   );
 }

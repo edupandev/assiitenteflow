@@ -1,17 +1,37 @@
-import { ModuleScaffold } from "@/components/layout/page-placeholder";
+import { requireUserContext } from "@/lib/auth";
+import { createClient } from "@/lib/supabase/server";
+import { getClosingPeriod } from "@/modules/timecard/calculations";
+import { TimecardClient } from "@/modules/timecard/timecard-client";
+import type { TimeRecord } from "@/types/database";
 
-export default function PontoPage() {
+export default async function PontoPage() {
+  const { userId, profile } = await requireUserContext();
+  const supabase = await createClient();
+  const { referenceMonth, periodStart } = getClosingPeriod();
+
+  const [recordsRes, closingRes] = await Promise.all([
+    supabase
+      .from("time_records")
+      .select("*")
+      .eq("user_id", userId)
+      .gte("work_date", periodStart)
+      .lte("work_date", `${referenceMonth}-31`)
+      .order("work_date", { ascending: false }),
+    profile.organization_id
+      ? supabase
+          .from("monthly_closings")
+          .select("status")
+          .eq("organization_id", profile.organization_id)
+          .eq("reference_month", referenceMonth)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
+
   return (
-    <ModuleScaffold
-      title="Controle de ponto"
-      description="Registros diários, calendário de jornada e preenchimento automático."
-      phase="Fase 4"
-      items={[
-        "Jornada padrão 08:00–12:00 / 13:00–17:00 (8 horas)",
-        "Distinção clara entre registros reais, manuais e estimados",
-        "Preenchimento automático de dias elegíveis respeitando escala e feriados",
-        "Edição justificada com auditoria completa",
-      ]}
+    <TimecardClient
+      initialRecords={(recordsRes.data ?? []) as TimeRecord[]}
+      initialMonth={referenceMonth}
+      initialClosingStatus={closingRes.data?.status ?? null}
     />
   );
 }

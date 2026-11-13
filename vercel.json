@@ -1,0 +1,12 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-report",
+      "schedule": "0 21 * * 1-5"
+    },
+    {
+      "path": "/api/cron/monthly-closing",
+      "schedule": "0 22 23 * *"
+    }
+  ]
+}
