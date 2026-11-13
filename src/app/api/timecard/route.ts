@@ -259,24 +259,20 @@ export async function POST(request: NextRequest) {
     .maybeSingle();
 
   if (parsed.data.action === "punch") {
-    const nowTime = getCurrentTimeBR();
-    const nextTimes = {
-      clock_in: existing?.clock_in ?? null,
-      lunch_out: existing?.lunch_out ?? null,
-      lunch_in: existing?.lunch_in ?? null,
-      clock_out: existing?.clock_out ?? null,
-    };
-
-    if (!nextTimes.clock_in) nextTimes.clock_in = nowTime;
-    else if (!nextTimes.lunch_out) nextTimes.lunch_out = nowTime;
-    else if (!nextTimes.lunch_in) nextTimes.lunch_in = nowTime;
-    else if (!nextTimes.clock_out) nextTimes.clock_out = nowTime;
-    else {
+    if (existing?.clock_out) {
       return NextResponse.json(
-        { error: "Todas as 4 batidas de hoje já foram registradas." },
+        { error: "A saída de hoje já foi registrada." },
         { status: 400 }
       );
     }
+
+    const nowTime = getCurrentTimeBR();
+    const nextTimes = {
+      clock_in: existing?.clock_in ?? "08:00:00",
+      lunch_out: existing?.lunch_out ?? "12:00:00",
+      lunch_in: existing?.lunch_in ?? "13:00:00",
+      clock_out: nowTime,
+    };
 
     const workedMinutes = calculateWorkedMinutes(nextTimes);
 
